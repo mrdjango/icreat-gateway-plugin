@@ -1,0 +1,1263 @@
+{
+  "cases": [
+    {
+      "name": "video decode maps size onto resolution and ratio",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "aliyun/wan3-0/text-to-video",
+          "body": {
+            "kind": "json",
+            "value": {
+              "model": "aliyun/wan3-0/text-to-video",
+              "prompt": "a red cube",
+              "seconds": 4,
+              "size": "854x480"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "aliyun/wan3-0/text-to-video",
+        "action": "text_to_video",
+        "requestBody": {
+          "model": "aliyun/wan3-0/text-to-video",
+          "prompt": "a red cube",
+          "metadata": {},
+          "seconds": 4,
+          "size": "854x480"
+        }
+      }
+    },
+    {
+      "name": "wan submit body matches the iCreat doc shape",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "aliyun/wan3-0/text-to-video",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "a red cube",
+            "seconds": 4,
+            "size": "854x480",
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/aliyun/wan3-0/text-to-video",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": {
+            "prompt": "a red cube"
+          },
+          "parameters": {
+            "duration": 4,
+            "ratio": "16:9",
+            "resolution": "480P",
+            "watermark": false
+          }
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "wan facts follow the body",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "aliyun/wan3-0/text-to-video",
+          "requestBody": {
+            "prompt": "a red cube",
+            "seconds": 4,
+            "size": "854x480",
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 4,
+        "resolution": "480P",
+        "upstream_cost": 0
+      }
+    },
+    {
+      "name": "metadata overrides resolution and ratio",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "aliyun/wan3-0-prime/image-to-video",
+          "requestBody": {
+            "prompt": "p",
+            "input_reference": "https://cdn.example/a.png",
+            "metadata": {
+              "resolution": "1080p",
+              "ratio": "9:16",
+              "duration": 10
+            }
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 10,
+        "resolution": "1080P",
+        "upstream_cost": 0
+      }
+    },
+    {
+      "name": "happy horse image-to-video uses first_frame media",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "ali/happyhorse-1-1/image-to-video",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "p",
+            "image": "https://cdn.example/a.png",
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/ali/happyhorse-1-1/image-to-video",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": {
+            "prompt": "p",
+            "media": [
+              {
+                "type": "first_frame",
+                "url": "https://cdn.example/a.png"
+              }
+            ]
+          },
+          "parameters": {
+            "duration": 5,
+            "ratio": "16:9",
+            "resolution": "720P",
+            "watermark": false
+          }
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "channel mapping: the upstream iCreat model decides the body",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "aliyun/wan3-0/text-to-video",
+          "upstreamModel": "aliyun/wan2-7/text-to-video",
+          "requestBody": {
+            "prompt": "p",
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 5,
+        "resolution": "720P",
+        "upstream_cost": 0
+      }
+    },
+    {
+      "name": "seedance single image is the first frame",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "bytedance/seedance-2-0",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "p",
+            "images": [
+              "https://cdn.example/a.png"
+            ],
+            "resolution": "1080p",
+            "metadata": {
+              "generate_audio": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/bytedance/seedance-2-0",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": [
+            {
+              "type": "text",
+              "text": "p"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "https://cdn.example/a.png"
+              },
+              "role": "first_frame"
+            }
+          ],
+          "resolution": "1080p",
+          "ratio": "adaptive",
+          "duration": 5,
+          "watermark": false,
+          "generate_audio": false
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "seedance reference video is a priced input",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "bytedance/seedance-2-5",
+          "requestBody": {
+            "prompt": "",
+            "seconds": 8,
+            "metadata": {
+              "resolution": "480p",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "edit"
+                },
+                {
+                  "type": "video_url",
+                  "video_url": {
+                    "url": "https://cdn.example/v.mp4"
+                  },
+                  "role": "reference_video"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 8,
+        "resolution": "480p",
+        "video_input": "video",
+        "upstream_cost": 0
+      }
+    },
+    {
+      "name": "h3 max takes first and last frames",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "minimax/h3-max",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "p",
+            "images": [
+              "https://cdn.example/a.png",
+              "https://cdn.example/b.png"
+            ],
+            "resolution": "480p",
+            "seconds": 6,
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/minimax/h3-max",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "minimax/h3-max",
+          "content": [
+            {
+              "type": "text",
+              "text": "p"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "https://cdn.example/a.png"
+              },
+              "role": "first_frame"
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "https://cdn.example/b.png"
+              },
+              "role": "last_frame"
+            }
+          ],
+          "resolution": "480P",
+          "duration": 6,
+          "ratio": "adaptive",
+          "aigc_watermark": false
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "kling image-to-video",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kwaivgi/kling-v3-0/image-to-video",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "p",
+            "image": "https://cdn.example/a.png",
+            "mode": "pro",
+            "seconds": 10,
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/kwaivgi/kling-v3-0/image-to-video",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prompt": "p",
+          "mode": "pro",
+          "duration": 10,
+          "image": "https://cdn.example/a.png"
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "kling facts use mode",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kwaivgi/kling-v3-0/text-to-video",
+          "requestBody": {
+            "prompt": "p",
+            "mode": "4k",
+            "seconds": 15,
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": {
+        "seconds": 15,
+        "mode": "4k",
+        "upstream_cost": 0
+      }
+    },
+    {
+      "name": "legacy per-call pricing gets no ratios",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kwaivgi/kling-v3-0/text-to-video",
+          "usagePurpose": "billing_ratios",
+          "requestBody": {
+            "prompt": "p",
+            "metadata": {}
+          }
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "rejects a resolution the model does not offer",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "bytedance/seedance-2-0-fast",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "p",
+              "resolution": "1080p"
+            }
+          }
+        }
+      ],
+      "expectedError": "resolution must be one of 480p, 720p"
+    },
+    {
+      "name": "rejects a duration outside the model range",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "aliyun/wan2-7/text-to-video",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "p",
+              "seconds": 20
+            }
+          }
+        }
+      ],
+      "expectedError": "seconds must be an integer between 4 and 15"
+    },
+    {
+      "name": "rejects the vendor-picked duration",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "bytedance/seedance-2-5",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "p",
+              "seconds": -1
+            }
+          }
+        }
+      ],
+      "expectedError": "seconds must be an integer between 4 and 30"
+    },
+    {
+      "name": "rejects non-HTTPS media",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "aliyun/wan3-0/image-to-video",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "p",
+              "input_reference": "http://cdn.example/a.png"
+            }
+          }
+        }
+      ],
+      "expectedError": "only from HTTPS URLs"
+    },
+    {
+      "name": "rejects uploaded files",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "aliyun/wan3-0/image-to-video",
+          "body": {
+            "kind": "multipart",
+            "fields": {
+              "prompt": [
+                "p"
+              ]
+            },
+            "files": [
+              {
+                "ref": "request_file:input_reference",
+                "field": "input_reference",
+                "filename": "a.png",
+                "mimeType": "image/png",
+                "size": 10
+              }
+            ]
+          }
+        }
+      ],
+      "expectedError": "pass image URLs instead of uploading files"
+    },
+    {
+      "name": "text-to-video models reject images",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "aliyun/wan3-0/text-to-video",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "p",
+              "image": "https://cdn.example/a.png"
+            }
+          }
+        }
+      ],
+      "expectedError": "does not take images"
+    },
+    {
+      "name": "multipart video fields are parsed",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "minimax/h3-video",
+          "body": {
+            "kind": "multipart",
+            "fields": {
+              "prompt": [
+                "p"
+              ],
+              "seconds": [
+                "6"
+              ],
+              "size": [
+                "2560x1440"
+              ]
+            },
+            "files": []
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "minimax/h3-video",
+        "action": "text_to_video",
+        "requestBody": {
+          "model": "minimax/h3-video",
+          "prompt": "p",
+          "metadata": {},
+          "seconds": 6,
+          "size": "2560x1440"
+        }
+      }
+    },
+    {
+      "name": "gpt image body and facts",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "openai/gpt-image-2",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "cube",
+            "size": "2048x2048",
+            "quality": "high",
+            "image": [
+              "https://cdn.example/a.png"
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/openai/gpt-image-2",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prompt": "cube",
+          "size": "2048x2048",
+          "quality": "high",
+          "image": [
+            "https://cdn.example/a.png"
+          ]
+        },
+        "action": "image_to_image"
+      }
+    },
+    {
+      "name": "gpt image tiers sizes by pixel area",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "openai/gpt-image-2",
+          "requestBody": {
+            "prompt": "cube",
+            "size": "3840x2160"
+          }
+        }
+      ],
+      "expected": {
+        "image_count": 1,
+        "resolution": "4K",
+        "quality": "medium",
+        "upstream_cost": 0
+      }
+    },
+    {
+      "name": "nano banana maps size onto image_size and aspect_ratio",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "google/gemini-3-1-flash-image",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "cube",
+            "size": "2048x1152"
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/google/gemini-3-1-flash-image",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prompt": "cube",
+          "aspect_ratio": "16:9",
+          "image_size": "2K"
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "qwen image uses DashScope messages",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "aliyun/qwen-image-3-0",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "cube",
+            "size": "1328x1328",
+            "image": "https://cdn.example/a.png"
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/aliyun/qwen-image-3-0",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": {
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "text": "cube"
+                  },
+                  {
+                    "image": "https://cdn.example/a.png"
+                  }
+                ]
+              }
+            ]
+          },
+          "parameters": {
+            "size": "1328*1328",
+            "watermark": false
+          }
+        },
+        "action": "image_to_image"
+      }
+    },
+    {
+      "name": "seedream defaults",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "bytedance/seedream-5-0",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k",
+          "requestBody": {
+            "prompt": "cube",
+            "output_format": "jpeg"
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/submit/bytedance/seedream-5-0",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prompt": "cube",
+          "size": "2K",
+          "outputFormat": "jpg",
+          "watermark": false
+        },
+        "action": "text_to_image"
+      }
+    },
+    {
+      "name": "image decode rejects n above 1",
+      "hook": "protocols",
+      "path": [
+        "openai_image",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "openai/gpt-image-2",
+          "operation": "generate",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "cube",
+              "n": 2
+            }
+          }
+        }
+      ],
+      "expectedError": "n must be 1"
+    },
+    {
+      "name": "image edit requires an image",
+      "hook": "protocols",
+      "path": [
+        "openai_image",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "openai/gpt-image-2",
+          "operation": "edit",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "cube"
+            }
+          }
+        }
+      ],
+      "expectedError": "image is required"
+    },
+    {
+      "name": "image decode keeps only known fields",
+      "hook": "protocols",
+      "path": [
+        "openai_image",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "openai/gpt-image-2",
+          "operation": "generate",
+          "body": {
+            "kind": "json",
+            "value": {
+              "model": "openai/gpt-image-2",
+              "prompt": "cube",
+              "size": "1024x1024",
+              "quality": "low",
+              "response_format": "b64_json",
+              "user": "u"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "openai/gpt-image-2",
+        "action": "text_to_image",
+        "requestBody": {
+          "model": "openai/gpt-image-2",
+          "prompt": "cube",
+          "size": "1024x1024",
+          "quality": "low"
+        }
+      }
+    },
+    {
+      "name": "submit response carries the task id",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "model": "openai/gpt-image-2"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "task_id": "task-01a16424-a33d-73b9-a8d4-f00682083d58"
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "task-01a16424-a33d-73b9-a8d4-f00682083d58",
+        "taskData": {
+          "task_id": "task-01a16424-a33d-73b9-a8d4-f00682083d58"
+        }
+      }
+    },
+    {
+      "name": "query posts the task id",
+      "hook": "buildQueryRequest",
+      "args": [
+        {
+          "taskId": "task-1",
+          "baseUrl": "https://api.icreat.ai",
+          "apiKey": "k"
+        }
+      ],
+      "expected": {
+        "url": "https://api.icreat.ai/v1/task/result",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer k",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "task_id": "task-1"
+        }
+      }
+    },
+    {
+      "name": "submitted task is queued",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "SUBMITTED",
+          "result": []
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "QUEUED",
+        "progress": "10%"
+      }
+    },
+    {
+      "name": "live video success",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "SUCCEEDED",
+          "result": [
+            {
+              "type": "Video",
+              "url": "https://s3.ap-southeast-1.amazonaws.com/genout-s3.icreat.ai/2026/10/22/task-0.mp4?X-Amz-Expires=86400"
+            }
+          ],
+          "costUSD": "0.1400"
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%",
+        "url": "https://s3.ap-southeast-1.amazonaws.com/genout-s3.icreat.ai/2026/10/22/task-0.mp4?X-Amz-Expires=86400"
+      }
+    },
+    {
+      "name": "unknown task id fails and refunds",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "NOT_FOUND",
+          "result": []
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "FAILURE",
+        "progress": "100%",
+        "reason": "iCreat task not found"
+      }
+    },
+    {
+      "name": "failed task keeps the upstream message",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "FAILED",
+          "result": [],
+          "message": "content rejected"
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "FAILURE",
+        "progress": "100%",
+        "reason": "content rejected"
+      }
+    },
+    {
+      "name": "unrecognized status is unknown",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "WEIRD"
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "UNKNOWN",
+        "reason": "unrecognized status: WEIRD"
+      }
+    },
+    {
+      "name": "completion settles costUSD and the image count",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "model": "openai/gpt-image-2",
+          "upstreamModel": "openai/gpt-image-2"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "status": "SUCCEEDED",
+          "result": [
+            {
+              "type": "Image",
+              "url": "https://cdn.example/x.png"
+            }
+          ],
+          "costUSD": "0.0240"
+        }
+      ],
+      "expected": {
+        "upstream_cost": 0.024,
+        "image_count": 1
+      }
+    },
+    {
+      "name": "out-of-range cost keeps the reservation",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "model": "aliyun/wan3-0/text-to-video",
+          "upstreamModel": "aliyun/wan3-0/text-to-video"
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "status": "SUCCEEDED",
+          "result": [
+            {
+              "type": "Video",
+              "url": "https://cdn.example/v.mp4"
+            }
+          ],
+          "costUSD": "-5"
+        }
+      ],
+      "expected": {}
+    },
+    {
+      "name": "video artifact",
+      "hook": "listArtifacts",
+      "args": [
+        {
+          "taskId": "t",
+          "status": "SUCCESS",
+          "action": "text_to_video",
+          "producerVersion": "1.0.0",
+          "data": {
+            "status": "SUCCEEDED",
+            "result": [
+              {
+                "type": "Video",
+                "url": "https://cdn.example/v.mp4"
+              }
+            ]
+          }
+        }
+      ],
+      "expected": [
+        {
+          "key": "video",
+          "type": "video",
+          "mimeType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "name": "image content request is credentialless",
+      "hook": "buildContentRequest",
+      "args": [
+        {
+          "artifactKey": "image-1",
+          "clientRequest": {
+            "method": "GET",
+            "headers": {}
+          },
+          "data": {
+            "status": "SUCCEEDED",
+            "result": [
+              {
+                "type": "Image",
+                "url": "https://cdn.example/x.png"
+              }
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://cdn.example/x.png",
+        "method": "GET",
+        "credentialless": true
+      }
+    },
+    {
+      "name": "openai image render",
+      "hook": "protocols",
+      "path": [
+        "openai_image",
+        "render"
+      ],
+      "args": [
+        {},
+        {
+          "task_id": "task_pub",
+          "status": "SUCCESS",
+          "created_at": 1792675000,
+          "data": {
+            "status": "SUCCEEDED",
+            "result": [
+              {
+                "type": "Image",
+                "url": "https://cdn.example/x.png"
+              }
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "created": 1792675000,
+        "data": [
+          {
+            "url": "https://cdn.example/x.png"
+          }
+        ]
+      }
+    },
+    {
+      "name": "openai video render of a failure",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "render"
+      ],
+      "args": [
+        {},
+        {
+          "task_id": "task_pub",
+          "status": "FAILURE",
+          "progress": "100%",
+          "created_at": 1792675000,
+          "fail_reason": "content rejected"
+        }
+      ],
+      "expected": {
+        "id": "task_pub",
+        "object": "video",
+        "status": "failed",
+        "progress": 100,
+        "created_at": 1792675000,
+        "error": {
+          "message": "content rejected",
+          "code": "task_failed"
+        }
+      }
+    },
+    {
+      "name": "responses decode routes an image model to the image body",
+      "hook": "protocols",
+      "path": [
+        "openai_responses",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "google/gemini-3-pro-image",
+          "stream": false,
+          "body": {
+            "kind": "json",
+            "value": {
+              "model": "google/gemini-3-pro-image",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "a cube"
+                    },
+                    {
+                      "type": "input_image",
+                      "image_url": "https://cdn.example/a.png"
+                    }
+                  ]
+                }
+              ],
+              "size": "4K"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "google/gemini-3-pro-image",
+        "action": "image_to_image",
+        "requestBody": {
+          "model": "google/gemini-3-pro-image",
+          "prompt": "a cube",
+          "image": [
+            "https://cdn.example/a.png"
+          ],
+          "size": "4K"
+        }
+      }
+    },
+    {
+      "name": "responses decode echoes a channel-mapped alias",
+      "hook": "protocols",
+      "path": [
+        "openai_responses",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "alias-under-test",
+          "upstreamModel": "aliyun/wan3-0/text-to-video",
+          "stream": false,
+          "body": {
+            "kind": "json",
+            "value": {
+              "model": "alias-under-test",
+              "input": "a cat walking on the beach",
+              "seconds": 6
+            }
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "alias-under-test",
+        "action": "text_to_video",
+        "requestBody": {
+          "model": "alias-under-test",
+          "prompt": "a cat walking on the beach",
+          "metadata": {},
+          "seconds": 6
+        }
+      }
+    },
+    {
+      "name": "responses final output links the video artifact",
+      "hook": "protocols",
+      "path": [
+        "openai_responses",
+        "renderFinal"
+      ],
+      "args": [
+        {
+          "artifacts": {
+            "video": {
+              "url": "https://gw.example/v1/videos/task_pub/content"
+            }
+          }
+        },
+        {
+          "task_id": "task_pub",
+          "status": "SUCCESS",
+          "data": {
+            "status": "SUCCEEDED",
+            "result": [
+              {
+                "type": "Video",
+                "url": "https://cdn.example/v.mp4"
+              }
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "output": [
+          {
+            "type": "message",
+            "status": "completed",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "<video controls src=\"https://gw.example/v1/videos/task_pub/content\"></video>",
+                "annotations": [],
+                "logprobs": []
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "vendor": "icreat"
+        }
+      }
+    }
+  ]
+}
