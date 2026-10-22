@@ -142,7 +142,7 @@ export const meta = {
     en: "iCreat image and video generation (Wan, Happy Horse, Seedance, MiniMax H3, Kling, GPT Image, Nano Banana, Qwen Image, Seedream)",
     zh: "iCreat 图片与视频生成（万相、Happy Horse、Seedance、MiniMax H3、可灵、GPT Image、Nano Banana、通义图像、Seedream）",
   },
-  version: "1.0.0",
+  version: "1.0.1",
   author: { name: "TensorGrid" },
   website: "https://icreat.ai/hub/docs/integration/overview",
   baseUrl: "https://api.icreat.ai",
@@ -528,6 +528,19 @@ function requestFields(ctx) {
   throw new Error("JSON or multipart body required");
 }
 
+// The host checks every request member named like a usage fact (resolution,
+// mode, quality) against the pricing enum at any depth, so a client spelling
+// such as "480p" must be rewritten to the canonical value the facts carry.
+function canonicalRequest(requestBody, facts) {
+  const body = utils.json.clone(requestBody);
+  for (const key of ["resolution", "mode", "quality"]) {
+    if (!has(facts, key)) continue;
+    if (has(body, key)) body[key] = facts[key];
+    if (body.metadata && has(body.metadata, key)) body.metadata[key] = facts[key];
+  }
+  return body;
+}
+
 const VIDEO_STATUS = { NOT_START: "queued", SUBMITTED: "queued", QUEUED: "queued", IN_PROGRESS: "in_progress", SUCCESS: "completed", FAILURE: "failed" };
 
 // Prompt text and image URLs from a Responses `input` string or message list.
@@ -594,14 +607,16 @@ export const protocols = {
         for (const key of ["size", "quality", "aspect_ratio", "image_size", "output_format", "watermark"]) {
           if (has(req, key)) requestBody[key] = req[key];
         }
-        return { kind: "submit", model: model, action: imageRequest(target).action, requestBody: requestBody };
+        const request = imageRequest(target);
+        return { kind: "submit", model: model, action: request.action, requestBody: canonicalRequest(requestBody, request.facts) };
       }
       requestBody.metadata = plainObject(req.metadata, "metadata");
       if (images.length) requestBody.images = images;
       for (const key of ["seconds", "duration", "size", "resolution", "ratio", "mode", "negative_prompt", "generate_audio"]) {
         if (has(req, key)) requestBody[key] = req[key];
       }
-      return { kind: "submit", model: model, action: videoRequest(target).action, requestBody: requestBody };
+      const request = videoRequest(target);
+      return { kind: "submit", model: model, action: request.action, requestBody: canonicalRequest(requestBody, request.facts) };
     },
     renderEvents: function (ctx, task, previousState) {
       const status = String(task.status || "UNKNOWN").toUpperCase();
@@ -641,7 +656,7 @@ export const protocols = {
       }
       // Validate against the model's capabilities before any quota is reserved.
       const request = videoRequest({ model: ctx.model, upstreamModel: ctx.upstreamModel, requestBody: requestBody });
-      return { kind: "submit", model: ctx.model, action: request.action, requestBody: requestBody };
+      return { kind: "submit", model: ctx.model, action: request.action, requestBody: canonicalRequest(requestBody, request.facts) };
     },
     render: function (ctx, task) {
       const output = {
@@ -672,7 +687,7 @@ export const protocols = {
       }
       const request = imageRequest({ model: ctx.model, upstreamModel: ctx.upstreamModel, requestBody: requestBody });
       if (ctx.operation === "edit" && request.action !== "image_to_image") throw new Error("image is required");
-      return { kind: "submit", model: ctx.model, action: request.action, requestBody: requestBody };
+      return { kind: "submit", model: ctx.model, action: request.action, requestBody: canonicalRequest(requestBody, request.facts) };
     },
     render: function (ctx, task) {
       return { created: task.created_at, data: outputs(task.data, "image").map((item) => ({ url: trimmed(item.url) })) };

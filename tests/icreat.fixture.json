@@ -1,6 +1,92 @@
 {
   "cases": [
     {
+      "name": "lowercase resolution from clients is rewritten to the pricing enum",
+      "hook": "protocols",
+      "path": [
+        "openai_video",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "wan-3.0-text-to-video",
+          "upstreamModel": "aliyun/wan3-0/text-to-video",
+          "body": {
+            "kind": "multipart",
+            "fields": {
+              "prompt": [
+                "x"
+              ],
+              "seconds": [
+                "4"
+              ],
+              "size": [
+                "854x480"
+              ],
+              "resolution": [
+                "480p"
+              ],
+              "aspect_ratio": [
+                "16:9"
+              ],
+              "metadata": [
+                "{\"mode\":\"PRO\"}"
+              ]
+            },
+            "files": []
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "wan-3.0-text-to-video",
+        "action": "text_to_video",
+        "requestBody": {
+          "model": "wan-3.0-text-to-video",
+          "prompt": "x",
+          "metadata": {
+            "mode": "PRO"
+          },
+          "seconds": 4,
+          "size": "854x480",
+          "resolution": "480P"
+        }
+      }
+    },
+    {
+      "name": "kling mode and gpt quality are canonical too",
+      "hook": "protocols",
+      "path": [
+        "openai_image",
+        "decodeRequest"
+      ],
+      "args": [
+        {
+          "model": "openai/gpt-image-2",
+          "operation": "generate",
+          "body": {
+            "kind": "json",
+            "value": {
+              "prompt": "cube",
+              "size": "1024x1024",
+              "quality": "HIGH"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "openai/gpt-image-2",
+        "action": "text_to_image",
+        "requestBody": {
+          "model": "openai/gpt-image-2",
+          "prompt": "cube",
+          "size": "1024x1024",
+          "quality": "high"
+        }
+      }
+    },
+    {
       "name": "video decode maps size onto resolution and ratio",
       "hook": "protocols",
       "path": [
