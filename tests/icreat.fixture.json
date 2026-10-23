@@ -1027,6 +1027,72 @@
       }
     },
     {
+      "name": "busy upstream says to retry",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "FAILED",
+          "result": [],
+          "error_code": "PROVIDER-BUSY",
+          "error_message": "PROVIDER-BUSY"
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "FAILURE",
+        "progress": "100%",
+        "reason": "iCreat is busy right now, try again in a minute (PROVIDER-BUSY)"
+      }
+    },
+    {
+      "name": "unbillable parameters are named",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "FAILED",
+          "result": [],
+          "error_code": "CHARGE_FAIL",
+          "error_message": "Billing input is invalid"
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "FAILURE",
+        "progress": "100%",
+        "reason": "iCreat does not accept these parameters (CHARGE_FAIL: Billing input is invalid)"
+      }
+    },
+    {
+      "name": "other codes keep message and code",
+      "hook": "parseTaskResult",
+      "args": [
+        {},
+        {
+          "status": "FAILED",
+          "result": [],
+          "error_code": "CONTENT_BLOCKED",
+          "error_message": "content rejected by moderation"
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "FAILURE",
+        "progress": "100%",
+        "reason": "content rejected by moderation (CONTENT_BLOCKED)"
+      }
+    },
+    {
       "name": "unrecognized status is unknown",
       "hook": "parseTaskResult",
       "args": [

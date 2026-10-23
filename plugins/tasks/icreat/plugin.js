@@ -142,7 +142,7 @@ export const meta = {
     en: "iCreat image and video generation (Wan, Happy Horse, Seedance, MiniMax H3, Kling, GPT Image, Nano Banana, Qwen Image, Seedream)",
     zh: "iCreat 图片与视频生成（万相、Happy Horse、Seedance、MiniMax H3、可灵、GPT Image、Nano Banana、通义图像、Seedream）",
   },
-  version: "1.0.1",
+  version: "1.0.2",
   author: { name: "TensorGrid" },
   website: "https://icreat.ai/hub/docs/integration/overview",
   baseUrl: "https://api.icreat.ai",
@@ -454,7 +454,13 @@ export function parseTaskResult(ctx, body) {
   }
   if (status === "FAILED") {
     const error = body.error && typeof body.error === "object" ? body.error.message : body.error;
-    return { status: "FAILURE", progress: "100%", reason: trimmed(body.message || error || body.reason) || "iCreat task failed" };
+    const code = trimmed(body.error_code);
+    const message = trimmed(body.message || error || body.error_message || body.reason);
+    // Codes seen live (2026-10-23): a busy upstream, and a parameter iCreat cannot bill (e.g. an unlisted size).
+    if (code === "PROVIDER-BUSY") return { status: "FAILURE", progress: "100%", reason: "iCreat is busy right now, try again in a minute (PROVIDER-BUSY)" };
+    if (code === "CHARGE_FAIL") return { status: "FAILURE", progress: "100%", reason: "iCreat does not accept these parameters (CHARGE_FAIL: " + (message || "billing input is invalid") + ")" };
+    const reason = code && message && message !== code ? message + " (" + code + ")" : message || code;
+    return { status: "FAILURE", progress: "100%", reason: reason || "iCreat task failed" };
   }
   // iCreat answers an unknown task id with HTTP 200 and NOT_FOUND.
   if (status === "NOT_FOUND") return { status: "FAILURE", progress: "100%", reason: "iCreat task not found" };
