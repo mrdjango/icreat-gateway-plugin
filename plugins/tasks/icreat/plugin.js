@@ -142,7 +142,7 @@ export const meta = {
     en: "iCreat image and video generation (Wan, Happy Horse, Seedance, MiniMax H3, Kling, GPT Image, Nano Banana, Qwen Image, Seedream)",
     zh: "iCreat 图片与视频生成（万相、Happy Horse、Seedance、MiniMax H3、可灵、GPT Image、Nano Banana、通义图像、Seedream）",
   },
-  version: "1.0.2",
+  version: "1.0.3",
   author: { name: "TensorGrid" },
   website: "https://icreat.ai/hub/docs/integration/overview",
   baseUrl: "https://api.icreat.ai",
@@ -178,7 +178,7 @@ function modelOf(ctx) {
   for (const model of [ctx && ctx.upstreamModel, ctx && ctx.model].map(trimmed)) {
     if (has(VIDEO_MODELS, model) || has(IMAGE_MODELS, model)) return model;
   }
-  throw new Error("model is not served by the iCreat plugin");
+  throw new Error("model is not served by this channel");
 }
 
 function isImageModel(ctx) {
@@ -190,7 +190,7 @@ function mediaURLs(values, limit) {
   for (const value of values) {
     if (value === undefined || value === null || value === "") continue;
     const url = trimmed(value);
-    if (!/^https:\/\/[^\s]+$/i.test(url)) throw new Error("iCreat reads reference media only from HTTPS URLs");
+    if (!/^https:\/\/[^\s]+$/i.test(url)) throw new Error("the model provider reads reference media only from HTTPS URLs");
     if (!urls.includes(url)) urls.push(url);
   }
   if (limit !== undefined && urls.length > limit) throw new Error("at most " + limit + " reference images are supported");
@@ -424,7 +424,7 @@ export function buildSubmitRequest(ctx) {
 export function parseSubmitResponse(ctx, resp) {
   const body = resp.body;
   const taskId = trimmed(body && body.task_id);
-  if (!taskId) throw new Error(trimmed(body && body.message) || "iCreat returned no task_id");
+  if (!taskId) throw new Error(trimmed(body && body.message) || "the model provider returned no task id");
   return { taskId: taskId, taskData: body };
 }
 
@@ -449,7 +449,7 @@ export function parseTaskResult(ctx, body) {
   if (["PROCESSING", "RUNNING", "IN_PROGRESS"].includes(status)) return { status: "IN_PROGRESS", progress: "50%" };
   if (status === "SUCCEEDED") {
     const first = outputs(body)[0];
-    if (!first) return { status: "FAILURE", progress: "100%", reason: "iCreat task succeeded without output" };
+    if (!first) return { status: "FAILURE", progress: "100%", reason: "The model provider finished without an output" };
     return { status: "SUCCESS", progress: "100%", url: trimmed(first.url) };
   }
   if (status === "FAILED") {
@@ -457,13 +457,14 @@ export function parseTaskResult(ctx, body) {
     const code = trimmed(body.error_code);
     const message = trimmed(body.message || error || body.error_message || body.reason);
     // Codes seen live (2026-10-23): a busy upstream, and a parameter iCreat cannot bill (e.g. an unlisted size).
-    if (code === "PROVIDER-BUSY") return { status: "FAILURE", progress: "100%", reason: "iCreat is busy right now, try again in a minute (PROVIDER-BUSY)" };
-    if (code === "CHARGE_FAIL") return { status: "FAILURE", progress: "100%", reason: "iCreat does not accept these parameters (CHARGE_FAIL: " + (message || "billing input is invalid") + ")" };
+    // Client-facing reasons never name iCreat: gateway users only see "the model provider".
+    if (code === "PROVIDER-BUSY") return { status: "FAILURE", progress: "100%", reason: "The model provider is busy right now, try again in a minute" };
+    if (code === "CHARGE_FAIL") return { status: "FAILURE", progress: "100%", reason: "The model provider does not accept these parameters (" + (message || "billing input is invalid") + ")" };
     const reason = code && message && message !== code ? message + " (" + code + ")" : message || code;
-    return { status: "FAILURE", progress: "100%", reason: reason || "iCreat task failed" };
+    return { status: "FAILURE", progress: "100%", reason: reason || "The model provider could not complete the task" };
   }
   // iCreat answers an unknown task id with HTTP 200 and NOT_FOUND.
-  if (status === "NOT_FOUND") return { status: "FAILURE", progress: "100%", reason: "iCreat task not found" };
+  if (status === "NOT_FOUND") return { status: "FAILURE", progress: "100%", reason: "The model provider does not know this task" };
   return { status: "UNKNOWN", reason: "unrecognized status: " + status };
 }
 
@@ -501,7 +502,7 @@ export function buildContentRequest(ctx) {
 
 // Multipart form fields arrive as strings; uploaded files cannot reach iCreat.
 function formFields(body) {
-  if ((body.files || []).length) throw new Error("iCreat reads reference media only from HTTPS URLs; pass image URLs instead of uploading files");
+  if ((body.files || []).length) throw new Error("the model provider reads reference media only from HTTPS URLs; pass image URLs instead of uploading files");
   const req = {};
   const fields = body.fields || {};
   for (const name of Object.keys(fields)) {

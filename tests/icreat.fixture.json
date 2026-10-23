@@ -1002,7 +1002,7 @@
       "expected": {
         "status": "FAILURE",
         "progress": "100%",
-        "reason": "iCreat task not found"
+        "reason": "The model provider does not know this task"
       }
     },
     {
@@ -1045,7 +1045,7 @@
       "expected": {
         "status": "FAILURE",
         "progress": "100%",
-        "reason": "iCreat is busy right now, try again in a minute (PROVIDER-BUSY)"
+        "reason": "The model provider is busy right now, try again in a minute"
       }
     },
     {
@@ -1067,7 +1067,7 @@
       "expected": {
         "status": "FAILURE",
         "progress": "100%",
-        "reason": "iCreat does not accept these parameters (CHARGE_FAIL: Billing input is invalid)"
+        "reason": "The model provider does not accept these parameters (Billing input is invalid)"
       }
     },
     {
